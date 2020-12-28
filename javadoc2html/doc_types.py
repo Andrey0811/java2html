@@ -53,15 +53,18 @@ class Comment:
         if self.version:
             temp += f'<p class = \'left\'>Version: {self.version}</p>'
         if self.since:
-            temp += f'<p class = \'left\'>Available since version{self.since}</p>'
+            temp += f'<p class = \'left\'>' \
+                    f'Available since version{self.since}</p>'
         if self.deprecated:
-            temp += f'<p class = \'left\'>Deprecated {str.lower(self.deprecated)}</p>'
+            temp += f'<p class = \'left\'>' \
+                    f'Deprecated {str.lower(self.deprecated)}</p>'
         if self.see:
             temp += f'<p class = \'left\'>Also see: ' \
                     f'<a href=\"{os.path.join(self.see + ".html")}\"' \
                     f'>{self.see}</a></p>'
         if self.description:
-            temp += f'<p class = \'left\'>Description: {self.description}</p>'
+            temp += f'<p class = \'left\'>' \
+                    f'Description: {self.description}</p>'
         return temp
 
     def method_comment_to_html(self):
@@ -73,7 +76,8 @@ class Comment:
             for param in self.param:
                 temp += f'<p class = \'left\'>{param}</p>'
         if self.returns:
-            temp += f'<p class = \'left\'><i>Returns</i> {self.returns}</p>'
+            temp += f'<p class = \'left\'><i>' \
+                    f'Returns</i> {self.returns}</p>'
         return temp
 
 
@@ -138,8 +142,10 @@ class DocClass:
         self.methods = list()
         self.fields = list()
 
-    def add_method(self, prototype, mod, name, args, return_type, comment=None):
-        self.methods.append(Method(prototype, mod, name, args, return_type, comment))
+    def add_method(self, prototype, mod, name,
+                   args, return_type, comment=None):
+        self.methods.append(Method(prototype, mod, name,
+                                   args, return_type, comment))
 
     def add_field(self, mod, name, doc_type):
         self.fields.append(Field(mod, name, doc_type))

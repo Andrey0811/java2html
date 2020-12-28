@@ -20,7 +20,8 @@ class ConvertToHtml:
     def create_common_file(self):
         temp = f'<head><title>{self.project_name}</title>' \
                f'<meta http-equiv="Content-Type"' \
-                    ' content="text/html; charset=charset=utf-8"></head><body><br>' \
+                    ' content="text/html; ' \
+               'charset=charset=utf-8"></head><body><br>' \
                f'<h1>Project {self.project_name}</h1><br>' \
                f'<table id = "tbl"><tr><th colspan="2">Java files</th></tr>'
         for file in self.files:

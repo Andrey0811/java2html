@@ -1,6 +1,5 @@
 import argparse
 import os
-from pathlib import Path
 
 from javadoc2html.convert_to_html import ConvertToHtml
 from javadoc2html.javadoc_parser import JavaDocParser

@@ -39,8 +39,8 @@ class JavaDocParser:
                                                           .match(line))
                     elif interface_pattern.match(line):
                         self.is_interface = True
-                        doc_interface = self.parse_interface_name(interface_pattern
-                                                                  .match(line))
+                        doc_interface = self.parse_interface_name(
+                            interface_pattern.match(line))
                     elif start_comm_big.match(line) \
                             and not self.is_comment:
                         temp = line
@@ -88,8 +88,8 @@ class JavaDocParser:
                                               .match(line), doc_class)
                 elif self.is_interface:
                     if method_pattern_inter.match(line):
-                        self.parse_interface_method_name(method_pattern_inter
-                                                         .match(line), doc_interface)
+                        self.parse_interface_method_name(
+                            method_pattern_inter.match(line), doc_interface)
                     elif field_pattern.match(line) and \
                             self.is_method is False:
                         self.parse_field_name(field_pattern
