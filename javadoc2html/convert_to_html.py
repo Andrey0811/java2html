@@ -14,7 +14,7 @@ class ConvertToHtml:
         self.create_common_file()
         for file in self.files:
             name = file.name.replace('.java', '.html')
-            with open(self.directory + name, 'w+') as f:
+            with open(name, 'w+') as f:
                 f.write(file.to_html())
 
     def create_common_file(self):

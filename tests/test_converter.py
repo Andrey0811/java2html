@@ -3,13 +3,12 @@ from pathlib import Path
 
 import os
 
+from javadoc2html.__main__ import get_files_from_dir
 from javadoc2html.convert_to_html import ConvertToHtml
-from javadoc2html.javadoc_parser import JavaDocParser
 
 
 class Test(unittest.TestCase):
-    handler = JavaDocParser(str(Path.cwd() / 'tests' / 'resources'))
-    files = handler.get_files_from_dir()
+    files = get_files_from_dir(str(Path.cwd() / 'tests' / 'resources'))
     converter = ConvertToHtml(files, 'resources', str(Path.cwd() / 'tests' / 'resources') + '/')
 
     def test_project_exist(self):
@@ -25,7 +24,6 @@ class Test(unittest.TestCase):
 
     def test_javadoc_parser(self):
         assert len(self.files) == 2
-        assert self.handler.dir.startswith(os.getcwd())
 
 
 if __name__ == '__main__':

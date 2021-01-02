@@ -1,4 +1,14 @@
 import os
+import re
+from re import Pattern
+
+start_comm_big = re.compile(r'.*/\*\*.*')
+finish_comm_big = re.compile(r'.*\*/.*')
+class_pattern = re.compile(r'(\w+\s)?class\s(\w+)\s(.*)?.*\s?')
+method_pattern = re.compile(r'^.(((?!if).)*)\((.*)\)(.*{)?$')
+method_pattern_inter = re.compile(r'(.*) (.*)\((.*)\);')
+interface_pattern = re.compile(r'(\w+)?.*interface.*\s(\w+).*')
+field_pattern = re.compile(r'(.*) (.*);')
 
 
 class Comment:
@@ -120,6 +130,29 @@ class Method:
         temp += '</div>'
         return temp
 
+    @classmethod
+    def parse_method_name(cls, line: str,
+                          pattern: Pattern = method_pattern,
+                          comment: Comment = None):
+        match = pattern.match(line)
+        index = match.group(1).rfind(' ')
+        name = match.group(1)[index:].strip()
+        doc_type = match.group(1)[:index]
+        args = match.group(3)
+        doc_type, mod = DocFile.get_mod_and_doc_type(doc_type)
+
+        return cls(match.group(0), mod, name, args, doc_type, comment)
+
+    @classmethod
+    def parse_interface_method_name(cls, line: str,
+                                    pattern: Pattern = method_pattern_inter):
+        match = pattern.match(line)
+        doc_type = match.group(1)
+        name = match.group(2)
+        args = match.group(3)
+        doc_type, mod = DocFile.get_mod_and_doc_type(doc_type)
+        return cls(match.group(0), mod, name, args, doc_type, None)
+
 
 class Field:
     def __init__(self, mod, name, doc_type):
@@ -132,6 +165,19 @@ class Field:
                f'<td>{self.mod}</td>' \
                f'<td>{self.type}</td></tr>'
 
+    @classmethod
+    def parse_field_name(cls, line: str,
+                         pattern: Pattern = field_pattern):
+        match = pattern.match(line)
+        name = match.group(2).split(' ').pop()
+        doc_type = match.group(1).strip()
+        doc_type, mod = DocFile.get_mod_and_doc_type(doc_type)
+        if '=' in doc_type:
+            doc_type = doc_type.split('=')[0].strip().split(' ')
+            name = doc_type[len(doc_type) - 1].strip()
+            doc_type = doc_type[0].strip()
+        return cls(mod, name, doc_type)
+
 
 class DocClass:
     def __init__(self, name: str, mod: str, parent):
@@ -142,13 +188,19 @@ class DocClass:
         self.methods = list()
         self.fields = list()
 
-    def add_method(self, prototype, mod, name,
-                   args, return_type, comment=None):
-        self.methods.append(Method(prototype, mod, name,
-                                   args, return_type, comment))
+    # def add_method(self, prototype, mod, name,
+    #                args, return_type, comment=None):
+    #     self.methods.append(Method(prototype, mod, name,
+    #                                args, return_type, comment))
 
-    def add_field(self, mod, name, doc_type):
-        self.fields.append(Field(mod, name, doc_type))
+    def add_method(self, method: Method):
+        self.methods.append(method)
+
+    # def add_field(self, mod, name, doc_type):
+    #     self.fields.append(Field(mod, name, doc_type))
+
+    def add_field(self, field):
+        self.fields.append(field)
 
     def add_interface(self, row):
         self.interface = row
@@ -228,3 +280,113 @@ class DocFile:
         for doc_class in self.classes:
             temp += doc_class.to_html()
         return temp
+
+    @classmethod
+    def read_java_file(cls, file_path):
+        is_class = False
+        is_interface = False
+        is_comment = False
+        is_method = False
+        parse_file = DocFile()
+        with open(file_path) as f:
+            for line in f:
+                if not is_class and not is_interface:
+                    if class_pattern.match(line):
+                        is_class = True
+                        doc_class = cls.parse_class_name(class_pattern
+                                                         .match(line))
+                    elif interface_pattern.match(line):
+                        is_interface = True
+                        doc_interface = cls.parse_interface_name(
+                            interface_pattern.match(line))
+                    elif start_comm_big.match(line) \
+                            and not is_comment:
+                        temp = line
+                        comment = Comment()
+                        is_comment = True
+                    elif is_comment \
+                            and finish_comm_big.match(line) is None:
+                        temp += line
+                        comment.parse_comment(line)
+                    elif is_comment and finish_comm_big.match(line):
+                        is_comment = False
+                        parse_file.add_comments(comment)
+
+                elif is_class:
+                    if start_comm_big.match(line) \
+                            and not is_comment:
+                        temp = line
+                        comment = Comment()
+                        is_comment = True
+                        stop = False
+                    elif is_comment \
+                            and finish_comm_big.match(line) is None \
+                            and not stop:
+                        temp += line
+                        comment.parse_comment(line)
+                    elif finish_comm_big.match(line):
+                        stop = True
+                    elif method_pattern.match(line) and \
+                            is_method is False:
+                        is_method = True
+                        if is_comment:
+                            doc_class.add_method(Method.parse_method_name(line, comment=comment))
+                            is_comment = False
+                            stop = False
+                        else:
+                            doc_class.add_method(Method.parse_method_name(line))
+                    elif is_method and '   }' in line:
+                        is_method = False
+                    elif field_pattern.match(line) and \
+                            is_method is False:
+                        doc_class.add_field(Field.parse_field_name(line))
+                elif is_interface:
+                    if method_pattern_inter.match(line):
+                        doc_interface.add_method(Method.parse_interface_method_name(line))
+                    elif field_pattern.match(line) and \
+                            is_method is False:
+                        doc_interface.add_field(Field.parse_field_name(line))
+        if is_class:
+            parse_file.add_class(doc_class)
+        if is_interface:
+            parse_file.add_class(doc_interface)
+
+        parse_file.add_name(file_path)
+        return parse_file
+
+    @staticmethod
+    def get_mod_and_doc_type(doc_type):
+        if doc_type.find('public') != -1:
+            mod = 'public'
+            doc_type = doc_type[9:]
+        elif doc_type.find('private') != -1:
+            mod = 'private'
+            doc_type = doc_type[7:]
+        elif doc_type.find('protected') != -1:
+            mod = 'protected'
+            doc_type = doc_type[9:]
+        else:
+            mod = 'package-private'
+        doc_type = doc_type.strip()
+        return doc_type, mod
+
+    @staticmethod
+    def parse_class_name(match):
+        doc_class = DocClass(match.group(2), match.group(1), '')
+        doc_property = match.group(3)
+        if re.match(r'extends (.*) implements (.*)', doc_property):
+            doc_class.add_parent(re.match(r'extends (.*) implements (.*)',
+                                          doc_property).group(1))
+            doc_class.add_interface(re.match(r'extends (.*) implements (.*)',
+                                             doc_property).group(2))
+        if re.match(r'extends (.*)', doc_property):
+            doc_class.add_parent(re.match(r'extends (.*)',
+                                          doc_property).group(1))
+        if re.match(r'implements (.*)', doc_property):
+            doc_class.add_interface(re.match(r'implements (.*)',
+                                             doc_property).group(1))
+        return doc_class
+
+    @staticmethod
+    def parse_interface_name(match):
+        return DocClass(match.group(2), match.group(1), 'Interface')
