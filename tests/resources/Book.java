@@ -1,6 +1,6 @@
 /**
  * Класс продукции со свойствами <b>maker</b> и <b>price</b>.
- * @autor Киса Воробьянинов
+ * @author Киса Воробьянинов
  * @version 2.1
 */
 interface Book{
